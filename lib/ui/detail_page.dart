@@ -38,28 +38,28 @@ class RestaurantDetailPage extends StatelessWidget {
                 children: [
                   Text(
                     restaurant.name,
-                    style: Theme.of(context).textTheme.headline6,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Divider(color: Colors.grey),
                   Text(
                     'Rating: ${restaurant.rating}',
-                    style: Theme.of(context).textTheme.caption,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 10),
                   Text(
                     'Location: ${restaurant.city}',
-                    style: Theme.of(context).textTheme.caption,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const Divider(color: Colors.grey),
                   Text(
                     restaurant.description,
-                    style: Theme.of(context).textTheme.bodyText1,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 10),
                   const Divider(color: Colors.grey),
                   Text(
                     "Foods:",
-                    style: Theme.of(context).textTheme.bodyText1,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   SizedBox(
                     height: 160,
@@ -76,7 +76,7 @@ class RestaurantDetailPage extends StatelessWidget {
                   const Divider(color: Colors.grey),
                   Text(
                     "Drinks:",
-                    style: Theme.of(context).textTheme.bodyText1,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   SizedBox(
                     height: 160,

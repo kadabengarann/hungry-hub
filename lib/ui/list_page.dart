@@ -78,7 +78,7 @@ class ListPage extends StatelessWidget {
                         Container(height: 5),
                         Text(
                           restaurant.name,
-                          style: Theme.of(context).textTheme.subtitle2,
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
                         Container(height: 5),
                         Text(
