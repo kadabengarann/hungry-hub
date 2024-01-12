@@ -1,13 +1,24 @@
-import 'package:hungry_hub_app/data/restaurants.dart';
+import 'package:hungry_hub_app/common/result_state.dart';
+import 'package:hungry_hub_app/components/error_state_widget.dart';
+import 'package:hungry_hub_app/components/restaurant_list_item.dart';
+import 'package:hungry_hub_app/data/api/api_service.dart';
+import 'package:hungry_hub_app/data/models/restaurants.dart';
+import 'package:hungry_hub_app/data/provider/restaurant_provider.dart';
 import 'package:hungry_hub_app/ui/detail_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:hungry_hub_app/ui/restaurant_search_page.dart';
+import 'package:provider/provider.dart';
 
-class ListPage extends StatelessWidget {
+class ListPage extends StatefulWidget {
   static const routeName = '/restaurant_list';
 
   const ListPage({super.key});
 
+  @override
+  State<ListPage> createState() => _ListPageState();
+}
+
+class _ListPageState extends State<ListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,95 +26,58 @@ class ListPage extends StatelessWidget {
         title: const Text(
           'Hungry Hub',
         ),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              showSearch<Restaurant?>(
+                  context: context, delegate: RestaurantSearchPage());
+            },
+            icon: const Icon(Icons.search),
+          ),
+        ],
       ),
-      body: FutureBuilder<String>(
-        future: DefaultAssetBundle.of(context)
-            .loadString('assets/restaurants.json'),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            }
-            final List<Restaurant> restaurants =
-                parseRestaurants(snapshot.data);
-            return ListView.builder(
-              itemCount: restaurants.length,
-              itemBuilder: (context, index) {
-                return _buildRestaurantItem(context, restaurants[index]);
-              },
-            );
-          } else {
-            return const CircularProgressIndicator();
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildRestaurantItem(BuildContext context, Restaurant restaurant) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      child: InkWell(
-        onTap: () {
-          Navigator.pushNamed(
-              context,
-              RestaurantDetailPage.routeName
-                  .replaceFirst(':id', restaurant.id.toString()),
-              arguments: restaurant);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        restaurant.pictureId,
-                        height: 100,
-                        width: 100,
-                        fit: BoxFit.cover,
-                      )),
-                  Container(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(height: 5),
-                        Text(
-                          restaurant.name,
-                          style: Theme.of(context).textTheme.titleSmall,
+      body: ChangeNotifierProvider<RestaurantProvider>(
+        create: (_) => RestaurantProvider(apiService: ApiService()),
+        child: Consumer<RestaurantProvider>(
+          builder: (context, state, _) {
+            if (state.state == ResultState.loading) {
+              return const Center(child: CircularProgressIndicator(color: Colors.lightBlue));
+            } else if (state.state == ResultState.hasData) {
+              return ListView.builder(
+                  itemCount: state.result.restaurants.length,
+                  itemBuilder: (context, index) {
+                    final restaurant = state.result.restaurants[index].toEntity();
+                    return Column(
+                      children: [
+                        ResrtaurantListItem(restaurant: restaurant, onTap: () {
+                          Navigator.pushNamed(
+                              context,
+                              RestaurantDetailPage.routeName
+                                  .replaceFirst(':id', restaurant.id),
+                              arguments: restaurant.id);},
                         ),
-                        Container(height: 5),
-                        Text(
-                          restaurant.rating,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                        Container(
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0x9DE5E5E5),
                           ),
-                        ),
-                        RatingBarIndicator(
-                          rating: double.parse(restaurant.rating),
-                          itemBuilder: (context, index) => const Icon(
-                            Icons.star,
-                            color: Colors.amber,
-                          ),
-                          itemCount: 5,
-                          itemSize: 20.0,
-                          direction: Axis.horizontal,
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                    );
+                  }
+              );
+            } else if (state.state == ResultState.noData) {
+              return const ErrorStateWidget(
+                  message: 'No Restaurant Data',
+                  image: 'assets/images/no_data_img.png');
+            } else if (state.state == ResultState.error) {
+              return ErrorStateWidget(
+                  message: state.message,
+                  image: 'assets/images/failed_img.png');
+            } else {
+              return const Center(child: Text(''));
+            }
+          },
         ),
       ),
     );

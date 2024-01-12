@@ -1,56 +1,198 @@
-import 'package:hungry_hub_app/data/restaurants.dart';
+import 'package:assorted_layout_widgets/assorted_layout_widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:hungry_hub_app/common/result_state.dart';
+import 'package:hungry_hub_app/components/error_state_widget.dart';
+import 'package:hungry_hub_app/components/menu_list_item.dart';
+import 'package:hungry_hub_app/data/api/api_service.dart';
+import 'package:hungry_hub_app/data/models/restaurant_detail_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:hungry_hub_app/data/provider/detail_restaurant_provider.dart';
+import 'package:provider/provider.dart';
 
-class RestaurantDetailPage extends StatelessWidget {
+class RestaurantDetailPage extends StatefulWidget {
   static const routeName = '/restaurant_detail';
+  final String id;
 
-  final Restaurant restaurant;
+  const RestaurantDetailPage({super.key, required this.id});
 
-  const RestaurantDetailPage({super.key, required this.restaurant});
+  @override
+  State<RestaurantDetailPage> createState() => _RestaurantDetailPageState();
+}
 
+class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Restaurant'),
+      body: ChangeNotifierProvider<RestaurantDetailProvider>(
+        create: (_) => RestaurantDetailProvider(
+            apiService: ApiService(), id: widget.id),
+        child: Consumer<RestaurantDetailProvider>(
+          builder: (context, state, _) {
+            if (state.state == ResultState.loading) {
+              return const Center(child: CircularProgressIndicator(color: Colors.lightBlue));
+            } else if (state.state == ResultState.hasData) {
+              final restaurant = state.result.restaurant;
+              return buildDetailRestaurant(context, restaurant!);
+            } else if (state.state == ResultState.noData) {
+              return const ErrorStateWidget(
+                  message: 'No Restaurant Data',
+                  image: 'assets/images/no_data_img.png');
+            } else if (state.state == ResultState.error) {
+              return ErrorStateWidget(
+                  message: state.message,
+                  image: 'assets/images/failed_img.png');
+            } else {
+              return const Center(child: Text(''));
+            }
+          },
+        ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Hero(
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+          },
+          child: Container(
+              decoration: const BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xC2000000),
+                    blurRadius: 30,
+                    offset: Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_outlined,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black,
+                    blurRadius: 3,
+                    offset: Offset(0, 0),
+                  ),
+                ],
+              )
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startTop,
+    );
+  }
+
+  Widget buildDetailRestaurant(BuildContext context, RestaurantItemDetail restaurant) {
+    return SingleChildScrollView(
+      child: ColumnSuper(
+        innerDistance: -30,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 0),
+            child: Hero(
                 tag: restaurant.pictureId,
                 child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25),
-                    ),
                     child: Image.network(
-                      restaurant.pictureId,
-                      height: 250,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                        "https://restaurant-api.dicoding.dev/images/medium/${restaurant.pictureId}",
+                        height: 250,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                        kIsWeb
+                            ? Image.network(
+                          "assets/images/error_img.png",
+                          height: 100,
+                          width: 100,
+                          fit: BoxFit.cover,
+                        )
+                            : Image.asset(
+                          "assets/images/error_img.png",
+                          height: 100,
+                          width: 100,
+                          fit: BoxFit.cover,
+                        )
                     ))),
-            Padding(
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(35),
+                topRight: Radius.circular(35),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xC2000000),
+                  blurRadius: 100,
+                  offset: Offset(0, -10),
+                ),
+              ],
+            ),
+            child: Padding(
               padding: const EdgeInsets.all(25),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     restaurant.name,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Divider(color: Colors.grey),
-                  Text(
-                    'Rating: ${restaurant.rating}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    'Location: ${restaurant.city}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            double.parse(restaurant.rating).toStringAsFixed(1),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(width: 5),
+                          RatingBarIndicator(
+                            rating: double.parse(restaurant.rating),
+                            itemBuilder: (context, index) => const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 20.0,
+                            direction: Axis.horizontal,
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.grey),
+                          const SizedBox(width: 5),
+                          Text(
+                            restaurant.city,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const Divider(color: Colors.grey),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 30,
+                    child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: restaurant.categories.length,
+                        itemBuilder: (context, index) {
+                          final categoryItem = restaurant.categories[index];
+                          return Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: Chip(
+                                label: Text(
+                                  categoryItem,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ));
+                        }),
+                  ),
+                  const SizedBox(height: 10),
                   Text(
                     restaurant.description,
                     style: Theme.of(context).textTheme.bodyLarge,
@@ -62,14 +204,16 @@ class RestaurantDetailPage extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   SizedBox(
-                    height: 160,
+                    height: 105,
                     child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: restaurant.foods.length,
                         itemBuilder: (context, index) {
                           final Food foodItem = restaurant.foods[index];
-                          return buildItemList(
-                              foodItem, "assets/images/food_img.png");
+                          return Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: MenuListItem(item: foodItem, imageUrl: "assets/images/food_img.png")
+                          );
                         }),
                   ),
                   const SizedBox(height: 10),
@@ -79,70 +223,24 @@ class RestaurantDetailPage extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   SizedBox(
-                    height: 160,
+                    height: 105,
                     child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: restaurant.drinks.length,
                         itemBuilder: (context, index) {
                           final Drink drinkItem = restaurant.drinks[index];
-                          return buildItemList(
-                              drinkItem, "assets/images/drink_img.png");
-                        }),
+                          return Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: MenuListItem(item: drinkItem, imageUrl: "assets/images/drink_img.png")
+                          );
+                        }
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildItemList(dynamic item, String imageUrl) {
-    return InkWell(
-      child: SizedBox(
-        width: 120,
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(10),
-                    ),
-                    color: Color(0xFFEFEFEF),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: kIsWeb
-                        ? Image.network(
-                            imageUrl,
-                            height: 80,
-                            fit: BoxFit.fitHeight,
-                          )
-                        : Image.asset(
-                            'assets/images/drink_img.png',
-                            height: 80,
-                            fit: BoxFit.fitHeight,
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: Text(
-                    item.name,
-                    textAlign: TextAlign.start,
-                    softWrap: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+          )
+        ],
       ),
     );
   }
